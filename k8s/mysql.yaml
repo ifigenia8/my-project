@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: my-project
+  labels:
+    app: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: db
+        image: mysql:5.7
+        ports:
+          - containerPort: 3306
+        #how to pass env var to the app from the image
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: mp-config
+                key: DATABASE_PASSWORD
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: mp-config
+                key: DATABASE_PASSWORD
+          - name: MYSQL_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                name: mp-config
+                key: DATABASE_NAME
+        volumeMounts:
+          - name: my-project-pvc
+            mountPath: /var/lib/mysql2
+      volumes:
+          - name: my-project-pvc
+            persistentVolumeClaim:
+              claimName: my-project-pvc
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: my-project
+  labels: 
+    app: db
+spec:
+  selector:
+    app: db
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+
+---
+#PV
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-project-pv
+  namespace: my-project
+  labels:
+    type: local
+spec:
+  storageClassName: ""
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  claimRef:
+    namespace: my-project
+    name: my-project-pvc
+  hostPath:
+    path: /var/lib/mysql2
+---
+
+#PVC
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-project-pvc
+  namespace: my-project
+spec:
+  storageClassName: "" # Empty string must be explicitly set otherwise default StorageClass will be set
+  accessModes: 
+    - ReadWriteOnce
+  volumeName: my-project-pv
+  resources: 
+    requests: 
+      storage: 1Gi

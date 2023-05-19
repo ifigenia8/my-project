@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mp-deployment
+  namespace: my-project
+  labels:
+    app: mp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mp
+  template:
+    metadata:
+      labels:
+        app: mp
+    spec:
+      containers:
+      - name: mp
+        image: ghcr.io/ifigenia8/my-project:master
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 1337
+        env:
+        - name: DATABASE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: mp-config
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: mp-config
+              key: DATABASE_PASSWORD
+        - name: DATABASE_CLIENT
+          valueFrom:
+            configMapKeyRef:
+              name: mp-config
+              key: DATABASE_CLIENT
+        - name: DATABASE_HOST
+          value: db
+        - name: DATABASE_PORT
+          value: "3306"
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mp-config
+              key: DATABASE_NAME
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: JWT_SECRET
+        - name: ADMIN_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: ADMIN_JWT_SECRET
+        - name: APP_KEYS
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: APP_KEYS
+        - name: API_TOKEN_SALT
+          valueFrom:
+            secretKeyRef: 
+              name: secret
+              key: API_TOKEN_SALT
+        - name: TRANSFER_TOKEN_SALT
+          valueFrom:
+            secretKeyRef:
+              name: secret
+              key: TRANSFER_TOKEN_SALT
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: mp-config
+              key: NODE_ENV
+      imagePullSecrets:
+        - name: git-secret
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mp-service
+  namespace: my-project
+spec:
+  #to make it an external service
+  #type: NodePort
+  selector:
+    app: mp
+  ports:
+    - port: 1337
+      
